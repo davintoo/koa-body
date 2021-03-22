@@ -30,6 +30,9 @@ const jsonTypes = [
   'application/vnd.api+json',
   'application/csp-report'
 ];
+const binaryTypes = [
+  'application/offset+octet-stream'
+];
 
 /**
  *
@@ -40,6 +43,7 @@ const jsonTypes = [
 function requestbody(opts) {
   opts = opts || {};
   opts.onError = 'onError' in opts ? opts.onError : false;
+  opts.patchRaw = 'patchRaw' in opts ? opts.patchRaw : false;
   opts.patchNode = 'patchNode' in opts ? opts.patchNode : false;
   opts.patchKoa = 'patchKoa' in opts ? opts.patchKoa : true;
   opts.multipart = 'multipart' in opts ? opts.multipart : false;
@@ -97,6 +101,12 @@ function requestbody(opts) {
             limit: opts.textLimit,
             returnRawBody: opts.includeUnparsed
           });
+        } else if (ctx.is(binaryTypes)) {
+          bodyPromise = buddy.text(ctx, {
+            encoding: opts.encoding,
+            limit: opts.textLimit,
+            returnRawBody: opts.includeUnparsed
+          });
         } else if (opts.multipart && ctx.is('multipart')) {
           bodyPromise = formy(ctx, opts.formidable);
         }
@@ -119,6 +129,9 @@ function requestbody(opts) {
       return next();
     })
     .then(function(body) {
+      if (opts.patchRaw) {
+        ctx.req.body = body.raw;
+      }
       if (opts.patchNode) {
         if (isMultiPart(ctx, opts)) {
           ctx.req.body = body.fields;
